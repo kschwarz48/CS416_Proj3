@@ -19,24 +19,13 @@ void set_physical_mem() {
  * Part 2: Add a virtual to physical page translation to the TLB.
  * Feel free to extend the function arguments or return type.
  */
-
-//Global Variables
-unsigned int tlb_hits = 0;
-unsigned int tlb_accesses = 0;
-
 int
 add_TLB(void *va, void *pa)
 {
-    /*Part 2 HINT: Add a virtual to physical page translation to the TLB */
-    unsigned long vpn = (unsigned long)va / PGSIZE;
-    unsigned long ppn = (unsigned long)pa / PGSIZE;
-    unsigned long tlb_index = vpn % TLB_ENTRIES;
 
-    tlb_store.entries[tlb_index].vpn = vpn;
-    tlb_store.entries[tlb_index].ppn = ppn;
-    tlb_store.entries[tlb_index].valid = true;
-    
-    return 0;
+    /*Part 2 HINT: Add a virtual to physical page translation to the TLB */
+
+    return -1;
 }
 
 
@@ -47,16 +36,12 @@ add_TLB(void *va, void *pa)
  */
 pte_t *
 check_TLB(void *va) {
-    unsigned long vpn = (unsigned long)va / PGSIZE;
-    unsigned int tlb_index = vpn % TLB_ENTRIES;
+
     /* Part 2: TLB lookup code here */
-    if (tlb_store.entries[tlb_index].valid && tlb_store.entries[tlb_index].vpn == vpn) {
-        unsigned long pa = tlb_store.entries[tlb_index].ppn * PGSIZE;
-        return (pte_t *)pa;
-    }
+
+
 
    /*This function should return a pte_t pointer*/
-   return NULL;
 }
 
 
@@ -92,41 +77,8 @@ pte_t *translate(pde_t *pgdir, void *va) {
     * translation exists, then you can return physical address from the TLB.
     */
 
-    // Checking if translation exists in TLB
-    pte_t *tlb_result = check_TLB(va);
-    if (tlb_result != NULL) {
-        return tlb_result;
-    }
 
-    void *pa = NULL;
-
-
-
-    // if not found in tlb, do translation
-    unsigned long pgd_index = PGD_INDEX(va); //get page directory index
-    unsigned long pt_index = PT_INDEX(va); // get page table index
-    pde_t pgd_entry = pgdir[pgd_index]; // get page directory entry
-
-    //check if entry exists
-    if (pgd_entry & 0x1) {
-        pte_t *pte_base = (pte_t *)(pgd_entry & ~0xFFF); // get base address
-        pte_t pte_entry = pte_base[pt_index]; // get page table entry
-
-        // check if entry exists
-        if (pte_entry & 0x1) {
-            pa = (void *)((pte_entry & ~0xFFF) | OFFSET_INDEX(va)); // Get the physical address
-        }
-    }    
-    
-
-    // If translation successful, add to TLB
-    if (pa != NULL) { // pa here represents the physical address obtained from the page table
-        add_TLB(va, pa); // 
-    }
-
-    return pa;
-
-    //If translation not successful, then return NULL ***I believe this would be from PART 1 -Kevin
+    //If translation not successful, then return NULL
     return NULL; 
 }
 
