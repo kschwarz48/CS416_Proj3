@@ -101,7 +101,6 @@ pte_t *translate(pde_t *pgdir, void *va) {
     void *pa = NULL;
 
 
-
     // if not found in tlb, do translation
     unsigned long pgd_index = PGD_INDEX(va); //get page directory index
     unsigned long pt_index = PT_INDEX(va); // get page table index
@@ -117,17 +116,16 @@ pte_t *translate(pde_t *pgdir, void *va) {
             pa = (void *)((pte_entry & ~0xFFF) | OFFSET_INDEX(va)); // Get the physical address
         }
     }    
-    
+
 
     // If translation successful, add to TLB
-    if (pa != NULL) { // pa here represents the physical address obtained from the page table
-        add_TLB(va, pa); // 
+    if (pa != NULL) {
+        add_TLB(va, pa);
+    } else {
+        return NULL; //If translation not successful, then return NULL
     }
 
     return pa;
-
-    //If translation not successful, then return NULL ***I believe this would be from PART 1 -Kevin
-    return NULL; 
 }
 
 

@@ -25,6 +25,15 @@ typedef unsigned long pde_t;
 
 #define TLB_ENTRIES 512
 
+// Macro to get the page directory index
+#define PGD_INDEX(x) (((unsigned long)x >> 22) & 0x3FF)
+
+// Macro to get the page table index
+#define PT_INDEX(x) (((unsigned long)x >> 12) & 0x3FF)
+
+// Macro to get the offset from the virtual address
+#define OFFSET_INDEX(x) ((unsigned long)x & 0xFFF)
+
 //Structure to represents TLB
 //Since it's a direct-mapped TLB, 
 //i am using an array of entries, where each entry will store the VPN, PPN, 
@@ -42,7 +51,9 @@ struct tlb {
     * Think about the size of each TLB entry that performs virtual to physical
     * address translation.
     */
-   tlb_entry_t entries[TLB_ENTRIES];
+    void *va[TLB_ENTRIES];
+    void *pa[TLB_ENTRIES];
+    tlb_entry_t entries[TLB_ENTRIES];
 } tlb_t;
 struct tlb tlb_store;
 
@@ -58,5 +69,7 @@ void t_free(void *va, int size);
 int put_value(void *va, void *val, int size);
 void get_value(void *va, void *val, int size);
 void mat_mult(void *mat1, void *mat2, int size, void *answer);
+pte_t *check_TLB(void *va);
+int add_TLB(void *va, void *pa);
 
 #endif
