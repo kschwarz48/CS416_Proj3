@@ -1,5 +1,9 @@
 #include "my_vm.h"
 
+
+// Global Variables
+pde_t *page_directory;
+
 /*
 Function responsible for allocating and setting your physical memory 
 */
@@ -7,6 +11,16 @@ void set_physical_mem() {
 
     //Allocate physical memory using mmap or malloc; this is the total size of
     //your memory you are simulating
+
+    // Allocate memory for the page directory (root node)
+    page_directory = (pde_t *)malloc(PGSIZE);
+    if (!page_directory) {
+        perror("Error allocating memory for the page directory");
+        exit(EXIT_FAILURE);
+    }
+
+    // Initialize the page directory to zeros
+    memset(page_directory, 0, PGSIZE);
 
     
     //HINT: Also calculate the number of physical and virtual pages and allocate
@@ -184,7 +198,30 @@ void t_free(void *va, int size) {
      *
      * Part 2: Also, remove the translation from the TLB
      */
-    
+    int num_pages = (size + PGSIZE - 1) / PGSIZE;
+    unsigned long vpn_start = (unsigned long)va / PGSIZE;
+
+    for (int i = 0; i < num_pages; i++) {
+        unsigned long vpn = vpn_start + i;
+        pte_t *pte = translate(page_directory, (void *)(vpn * PGSIZE));
+
+        if (pte == NULL || !(*pte & 0x1)) {
+            // Invalid or not allocated page, can't free
+            fprintf(stderr, "t_free(): trying to free a not allocated page, vpn: %lu\n", vpn);
+            return;
+        }
+
+        // Free the physical page
+        unsigned long ppn = *pte / PGSIZE;
+        clear_physical_bitmap(ppn);
+        *pte &= ~0x1; // Clear the valid bit of the PTE
+
+        // Invalidate the TLB entry
+        unsigned long tlb_index = vpn % TLB_ENTRIES;
+        if (tlb_store.entries[tlb_index].valid && tlb_store.entries[tlb_index].vpn == vpn) {
+            tlb_store.entries[tlb_index].valid = false;
+        }
+    }
 }
 
 
@@ -202,7 +239,6 @@ int put_value(void *va, void *val, int size) {
 
 
     /*return -1 if put_value failed and 0 if put is successfull*/
-
 }
 
 
