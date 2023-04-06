@@ -203,14 +203,49 @@ void *t_malloc(unsigned int num_bytes) {
      * HINT: If the physical memory is not yet initialized, then allocate and initialize.
      */
 
+    // Allocate physical memory if not already initialized
+    if (physical_mem == NULL) {
+        set_physical_mem();
+    }
+
+    // Initialize the page directory if not already initialized
+    if (page_directory == NULL) {
+        page_directory = (pde_t *)get_next_avail(1); // Allocate a page for the page directory
+        add_TLB(page_directory, physical_mem); // Map the page directory to the first page of physical memory
+    }
+
+    // Calculate the number of pages needed
+    int num_pages = (num_bytes + PGSIZE - 1) / PGSIZE;
+
+    // Find the next available pages
+    void *va = get_next_avail(num_pages);
+    if (va == NULL) {
+        perror("Error: no available pages");
+        return NULL;
+    }
+
+    // Mark the pages as used in the virtual and physical bitmaps
+    mark_virtual_bitmap(va, num_pages);
+    unsigned long pa = mark_physical_bitmap(num_pages);
+
+    // Map the pages in the page table
+    for (int i = 0; i < num_pages; i++) {
+        unsigned long vpn = ((unsigned long)va + i * PGSIZE) / PGSIZE;
+        unsigned long pte_addr = (unsigned long)get_next_avail(1); // Allocate a page for the page table
+        add_TLB((void *)(vpn * PGSIZE), (void *)(pte_addr & ~0xFFF)); // Map the page table to a new physical page
+        page_directory[PGD_INDEX((void *)(vpn * PGSIZE))] = (pde_t)(pte_addr | 0x1); // Set the valid bit and store the page table's physical address in the page directory
+
+        pte_t *pte = (pte_t *)pte_addr;
+        pte[PT_INDEX((void *)(vpn * PGSIZE))] = (pte_t)(pa + i * PGSIZE | 0x1); // Set the valid bit and store the physical address in the page table entry
+    }
+
+    return va;
    /* 
     * HINT: If the page directory is not initialized, then initialize the
     * page directory. Next, using get_next_avail(), check if there are free pages. If
     * free pages are available, set the bitmaps and map a new page. Note, you will 
     * have to mark which physical pages are used. 
     */
-
-    return NULL;
 }
 
 /* Responsible for releasing one or more memory pages using virtual address (va)
@@ -261,8 +296,24 @@ int put_value(void *va, void *val, int size) {
      * than one page. Therefore, you may have to find multiple pages using translate()
      * function.
      */
+    int put_value(void *va, void *val, int size) {
+    // Translate virtual address to physical address
+    pte_t *pte = translate(page_directory, va);
+    if (pte == NULL || !(*pte & 0x1)) {
+        // Invalid or not allocated page, put_value fails
+        fprintf(stderr, "put_value(): invalid or not allocated page, va: %p\n", va);
+        return -1;
+    }
+    unsigned long pa = (*pte & ~0xFFF) + OFFSET_INDEX(va);
 
+    // Copy value to physical memory
+    unsigned char *phys_ptr = physical_mem + pa;
+    unsigned char *val_ptr = (unsigned char *)val;
+    for (int i = 0; i < size; i++) {
+        phys_ptr[i] = val_ptr[i];
+    }
 
+    return 0; // Success
     /*return -1 if put_value failed and 0 if put is successfull*/
 }
 
