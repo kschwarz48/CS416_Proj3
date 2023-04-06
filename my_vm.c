@@ -8,25 +8,50 @@ pde_t *page_directory;
 Function responsible for allocating and setting your physical memory 
 */
 void set_physical_mem() {
+    
+    // Try to allocate physical memory using mmap()
+    physical_mem = mmap(NULL, PHYSICAL_MEM_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (physical_mem == MAP_FAILED) {
+        // If mmap() fails, fall back to malloc()
+        physical_mem = malloc(PHYSICAL_MEM_SIZE);
+        if (physical_mem == NULL) {
+            perror("Error allocating physical memory");
+            exit(EXIT_FAILURE);
+        }
+    }
+    
+    // Initialize virtual and physical bitmaps
+    num_physical_pages = PHYSICAL_MEM_SIZE / PGSIZE;
+    num_virtual_pages = num_physical_pages * NUM_PROCESSES;
+    
+    // Allocate memory for the virtual bitmap and initialize it to zero
+    virtual_bitmap = (uint8_t *)malloc(num_virtual_pages / 8);
+    if (!virtual_bitmap) {
+        perror("Error allocating memory for virtual bitmap");
+        exit(EXIT_FAILURE);
+    }
+    memset(virtual_bitmap, 0, num_virtual_pages / 8);
+    
+    // Allocate memory for the physical bitmap and initialize it to zero
+    physical_bitmap = (uint8_t *)malloc(num_physical_pages / 8);
+    if (!physical_bitmap) {
+        perror("Error allocating memory for physical bitmap");
+        exit(EXIT_FAILURE);
+    }
+    memset(physical_bitmap, 0, num_physical_pages / 8);
 
-    //Allocate physical memory using mmap or malloc; this is the total size of
-    //your memory you are simulating
-
-    // Allocate memory for the page directory (root node)
+    // Allocate memory for the page directory (root node) and initialize it to zero
     page_directory = (pde_t *)malloc(PGSIZE);
     if (!page_directory) {
         perror("Error allocating memory for the page directory");
         exit(EXIT_FAILURE);
     }
-
-    // Initialize the page directory to zeros
     memset(page_directory, 0, PGSIZE);
-
     
     //HINT: Also calculate the number of physical and virtual pages and allocate
     //virtual and physical bitmaps and initialize them
-
 }
+
 
 
 /*

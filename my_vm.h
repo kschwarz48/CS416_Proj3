@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/mman.h>
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
@@ -46,17 +49,23 @@ typedef struct {
     bool valid;
 } tlb_entry_t;
 
+// TLB struct
 struct tlb {
-    /*Assume your TLB is a direct mapped TLB with the number of entries as TLB_ENTRIES
-    * Think about the size of each TLB entry that performs virtual to physical
-    * address translation.
-    */
     void *va[TLB_ENTRIES];
     void *pa[TLB_ENTRIES];
     tlb_entry_t entries[TLB_ENTRIES];
-} tlb_t;
-struct tlb tlb_store;
+};
 
+// Global variables
+extern pde_t *page_directory;
+extern uint8_t *physical_bitmap;
+extern uint8_t *virtual_bitmap;
+extern void *physical_mem;
+extern uint64_t num_physical_pages;
+extern uint64_t num_virtual_pages;
+extern struct tlb tlb_store;
+
+// Function prototypes
 void set_physical_mem();
 pte_t* translate(pde_t *pgdir, void *va);
 int page_map(pde_t *pgdir, void *va, void* pa);
@@ -69,7 +78,5 @@ void t_free(void *va, int size);
 int put_value(void *va, void *val, int size);
 void get_value(void *va, void *val, int size);
 void mat_mult(void *mat1, void *mat2, int size, void *answer);
-pte_t *check_TLB(void *va);
-int add_TLB(void *va, void *pa);
 
 #endif
