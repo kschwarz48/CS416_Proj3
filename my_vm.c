@@ -296,7 +296,6 @@ int put_value(void *va, void *val, int size) {
      * than one page. Therefore, you may have to find multiple pages using translate()
      * function.
      */
-    int put_value(void *va, void *val, int size) {
     // Translate virtual address to physical address
     pte_t *pte = translate(page_directory, va);
     if (pte == NULL || !(*pte & 0x1)) {
