@@ -324,8 +324,21 @@ void get_value(void *va, void *val, int size) {
     /* HINT: put the values pointed to by "va" inside the physical memory at given
     * "val" address. Assume you can access "val" directly by derefencing them.
     */
+    // Check for presence of translation in TLB
+    pte_t *pte = check_TLB(va);
+    if (pte == NULL) {
+        // If not present, perform translation
+        pte = translate(page_directory, va);
+    }
 
+    if (pte == NULL) {
+        fprintf(stderr, "get_value(): translation failed for virtual address %p\n", va);
+        return;
+    }
 
+    // Get physical address and copy value from physical memory
+    void *pa = (void *)(*pte & ~0xFFF) + OFFSET_INDEX(va);
+    memcpy(val, pa, size);
 }
 
 
