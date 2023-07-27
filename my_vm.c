@@ -5,10 +5,6 @@
 #include "my_vm.h"
 
 
-<<<<<<< Updated upstream
-// Global Variables
-pde_t *page_directory;
-=======
 //Global Variables
 pte_t* ram;
 pde_t* page_dir;
@@ -26,56 +22,11 @@ pthread_mutex_t lock_matmul;
 
 unsigned long tlb_misses = 0;
 unsigned long tlb_lookups = 0;
->>>>>>> Stashed changes
 
 /*
 Function responsible for allocating and setting your physical memory 
 */
 void set_physical_mem() {
-<<<<<<< Updated upstream
-    
-    // Try to allocate physical memory using mmap()
-    physical_mem = mmap(NULL, PHYSICAL_MEM_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (physical_mem == MAP_FAILED) {
-        // If mmap() fails, fall back to malloc()
-        physical_mem = malloc(PHYSICAL_MEM_SIZE);
-        if (physical_mem == NULL) {
-            perror("Error allocating physical memory");
-            exit(EXIT_FAILURE);
-        }
-    }
-    
-    // Initialize virtual and physical bitmaps
-    num_physical_pages = PHYSICAL_MEM_SIZE / PGSIZE;
-    num_virtual_pages = num_physical_pages * NUM_PROCESSES;
-    
-    // Allocate memory for the virtual bitmap and initialize it to zero
-    virtual_bitmap = (uint8_t *)malloc(num_virtual_pages / 8);
-    if (!virtual_bitmap) {
-        perror("Error allocating memory for virtual bitmap");
-        exit(EXIT_FAILURE);
-    }
-    memset(virtual_bitmap, 0, num_virtual_pages / 8);
-    
-    // Allocate memory for the physical bitmap and initialize it to zero
-    physical_bitmap = (uint8_t *)malloc(num_physical_pages / 8);
-    if (!physical_bitmap) {
-        perror("Error allocating memory for physical bitmap");
-        exit(EXIT_FAILURE);
-    }
-    memset(physical_bitmap, 0, num_physical_pages / 8);
-
-    // Allocate memory for the page directory (root node) and initialize it to zero
-    page_directory = (pde_t *)malloc(PGSIZE);
-    if (!page_directory) {
-        perror("Error allocating memory for the page directory");
-        exit(EXIT_FAILURE);
-    }
-    memset(page_directory, 0, PGSIZE);
-    
-    //HINT: Also calculate the number of physical and virtual pages and allocate
-    //virtual and physical bitmaps and initialize them
-=======
     ram = Malloc(MEMSIZE);
     //HINT: Also calculate the number of physical and virtual pages and allocate
     //virtual and physical bitmaps and initialize them
@@ -106,7 +57,6 @@ void set_physical_mem() {
         perror("mutex init has failed");
         exit(1);
     }
->>>>>>> Stashed changes
 }
 
 void destroy_physical_mem(){
@@ -121,7 +71,6 @@ void destroy_physical_mem(){
     destroy_virtual_address_info(va_info);
     free(ram);
 }
-
 
 /*
  * Part 2: Add a virtual to physical page translation to the TLB.
@@ -259,51 +208,12 @@ void *t_malloc(unsigned int num_bytes) {
      * HINT: If the physical memory is not yet initialized, then allocate and initialize.
      */
 
-    // Allocate physical memory if not already initialized
-    if (physical_mem == NULL) {
-        set_physical_mem();
-    }
-
-    // Initialize the page directory if not already initialized
-    if (page_directory == NULL) {
-        page_directory = (pde_t *)get_next_avail(1); // Allocate a page for the page directory
-        add_TLB(page_directory, physical_mem); // Map the page directory to the first page of physical memory
-    }
-
-    // Calculate the number of pages needed
-    int num_pages = (num_bytes + PGSIZE - 1) / PGSIZE;
-
-    // Find the next available pages
-    void *va = get_next_avail(num_pages);
-    if (va == NULL) {
-        perror("Error: no available pages");
-        return NULL;
-    }
-
-    // Mark the pages as used in the virtual and physical bitmaps
-    mark_virtual_bitmap(va, num_pages);
-    unsigned long pa = mark_physical_bitmap(num_pages);
-
-    // Map the pages in the page table
-    for (int i = 0; i < num_pages; i++) {
-        unsigned long vpn = ((unsigned long)va + i * PGSIZE) / PGSIZE;
-        unsigned long pte_addr = (unsigned long)get_next_avail(1); // Allocate a page for the page table
-        add_TLB((void *)(vpn * PGSIZE), (void *)(pte_addr & ~0xFFF)); // Map the page table to a new physical page
-        page_directory[PGD_INDEX((void *)(vpn * PGSIZE))] = (pde_t)(pte_addr | 0x1); // Set the valid bit and store the page table's physical address in the page directory
-
-        pte_t *pte = (pte_t *)pte_addr;
-        pte[PT_INDEX((void *)(vpn * PGSIZE))] = (pte_t)(pa + i * PGSIZE | 0x1); // Set the valid bit and store the physical address in the page table entry
-    }
-
-    return va;
    /* 
     * HINT: If the page directory is not initialized, then initialize the
     * page directory. Next, using get_next_avail(), check if there are free pages. If
     * free pages are available, set the bitmaps and map a new page. Note, you will 
     * have to mark which physical pages are used. 
     */
-<<<<<<< Updated upstream
-=======
     static pthread_mutex_t lock_alloc = PTHREAD_MUTEX_INITIALIZER;
     pthread_mutex_lock(&lock_alloc);
     if(num_bytes < 1){
@@ -454,7 +364,6 @@ void *t_malloc(unsigned int num_bytes) {
     }
     pthread_mutex_unlock(&lock_alloc);
     return (void*)va;
->>>>>>> Stashed changes
 }
 
 /* Responsible for releasing one or more memory pages using virtual address (va)
@@ -467,32 +376,6 @@ void t_free(void *va, int size) {
      *
      * Part 2: Also, remove the translation from the TLB
      */
-<<<<<<< Updated upstream
-    int num_pages = (size + PGSIZE - 1) / PGSIZE;
-    unsigned long vpn_start = (unsigned long)va / PGSIZE;
-
-    for (int i = 0; i < num_pages; i++) {
-        unsigned long vpn = vpn_start + i;
-        pte_t *pte = translate(page_directory, (void *)(vpn * PGSIZE));
-
-        if (pte == NULL || !(*pte & 0x1)) {
-            // Invalid or not allocated page, can't free
-            fprintf(stderr, "t_free(): trying to free a not allocated page, vpn: %lu\n", vpn);
-            return;
-        }
-
-        // Free the physical page
-        unsigned long ppn = *pte / PGSIZE;
-        clear_physical_bitmap(ppn);
-        *pte &= ~0x1; // Clear the valid bit of the PTE
-
-        // Invalidate the TLB entry
-        unsigned long tlb_index = vpn % TLB_ENTRIES;
-        if (tlb_store.entries[tlb_index].valid && tlb_store.entries[tlb_index].vpn == vpn) {
-            tlb_store.entries[tlb_index].valid = false;
-        }
-    }
-=======
     pthread_mutex_lock(&lock_free);
     unsigned long pages = ceil((double)size/(double)PGSIZE);
 
@@ -584,7 +467,6 @@ void t_free(void *va, int size) {
     }
     free(sizes);
     pthread_mutex_unlock(&lock_free);
->>>>>>> Stashed changes
 }
 
 
@@ -599,25 +481,6 @@ int put_value(void *va, void *val, int size) {
      * than one page. Therefore, you may have to find multiple pages using translate()
      * function.
      */
-<<<<<<< Updated upstream
-    // Translate virtual address to physical address
-    pte_t *pte = translate(page_directory, va);
-    if (pte == NULL || !(*pte & 0x1)) {
-        // Invalid or not allocated page, put_value fails
-        fprintf(stderr, "put_value(): invalid or not allocated page, va: %p\n", va);
-        return -1;
-    }
-    unsigned long pa = (*pte & ~0xFFF) + OFFSET_INDEX(va);
-
-    // Copy value to physical memory
-    unsigned char *phys_ptr = physical_mem + pa;
-    unsigned char *val_ptr = (unsigned char *)val;
-    for (int i = 0; i < size; i++) {
-        phys_ptr[i] = val_ptr[i];
-    }
-
-    return 0; // Success
-=======
     pthread_mutex_lock(&lock_put);
     if(size < va_info->entry_size){
         perror("invalid size argument");
@@ -673,8 +536,8 @@ int put_value(void *va, void *val, int size) {
     }
     pthread_mutex_unlock(&lock_put);
     return 0;
->>>>>>> Stashed changes
     /*return -1 if put_value failed and 0 if put is successfull*/
+
 }
 
 
@@ -684,23 +547,6 @@ void get_value(void *va, void *val, int size) {
     /* HINT: put the values pointed to by "va" inside the physical memory at given
     * "val" address. Assume you can access "val" directly by derefencing them.
     */
-<<<<<<< Updated upstream
-    // Check for presence of translation in TLB
-    pte_t *pte = check_TLB(va);
-    if (pte == NULL) {
-        // If not present, perform translation
-        pte = translate(page_directory, va);
-    }
-
-    if (pte == NULL) {
-        fprintf(stderr, "get_value(): translation failed for virtual address %p\n", va);
-        return;
-    }
-
-    // Get physical address and copy value from physical memory
-    void *pa = (void *)(*pte & ~0xFFF) + OFFSET_INDEX(va);
-    memcpy(val, pa, size);
-=======
    pthread_mutex_lock(&lock_get);
    if(size < va_info->entry_size){
         perror("invalid size argument");
@@ -752,7 +598,6 @@ void get_value(void *va, void *val, int size) {
         *(pte_t*)val = *phys;
     }
     pthread_mutex_unlock(&lock_get);
->>>>>>> Stashed changes
 }
 
 

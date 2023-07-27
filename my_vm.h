@@ -10,17 +10,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
-<<<<<<< Updated upstream
-#include <stdint.h>
-#include <string.h>
-#include <sys/mman.h>
-=======
 #include <sys/mman.h>
 #include <math.h>
 #include <string.h>
 #include <stdint.h>
 #include <pthread.h>
->>>>>>> Stashed changes
 
 //Assume the address space is 32 bits, so the max memory size is 4GB
 //Page size is 4KB
@@ -89,25 +83,6 @@ struct tlb_entry{
     unsigned long pfn;
 };
 
-<<<<<<< Updated upstream
-// TLB struct
-struct tlb {
-    void *va[TLB_ENTRIES];
-    void *pa[TLB_ENTRIES];
-    tlb_entry_t entries[TLB_ENTRIES];
-};
-
-// Global variables
-extern pde_t *page_directory;
-extern uint8_t *physical_bitmap;
-extern uint8_t *virtual_bitmap;
-extern void *physical_mem;
-extern uint64_t num_physical_pages;
-extern uint64_t num_virtual_pages;
-extern struct tlb tlb_store;
-
-// Function prototypes
-=======
 /************^*Not in default header file*^**************/
 /*Assume your TLB is a direct mapped TLB with the number of entries as TLB_ENTRIES
     * Think about the size of each TLB entry that performs virtual to physical
@@ -119,7 +94,6 @@ struct tlb{
 };
 struct tlb tlb_store;
 
->>>>>>> Stashed changes
 void set_physical_mem();
 void destroy_physical_mem();
 int add_TLB(void *va, void *pa);
@@ -133,8 +107,6 @@ void t_free(void *va, int size);
 int put_value(void *va, void *val, int size);
 void get_value(void *va, void *val, int size);
 void mat_mult(void *mat1, void *mat2, int size, void *answer);
-<<<<<<< Updated upstream
-=======
 
 /************V*Not in default header file*V**************/
 VA_info_t* init_virtual_address_info();
@@ -156,6 +128,5 @@ bool find_first_contig(bitmap_t* bm, unsigned long num_pages, unsigned long* va)
 void find_first_free(bitmap_t* bm);
 bool find_first_free_rec(bitmap_t* bm, unsigned long* va, unsigned long track);
 void* Malloc(size_t size);
->>>>>>> Stashed changes
 
 #endif
